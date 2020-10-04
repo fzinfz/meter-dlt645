@@ -7,18 +7,18 @@ import sys
 import signal
 import platform 
 
-from local_keys import *
+# from local_keys import *
 
 from serial.tools.list_ports import comports
  
 dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-def get_def_portx():
+def get_def_port_custom():
     #sys.stdout.write('get_def_port()\n')
-    os_name = platform.system();
+    os_name = platform.system()
     #sys.stdout.write('%s\n' % os_name)
     if (os_name == 'Windows'):
-        def_port = 'COM1'
+        def_port = 'COM4'
     elif (os_name == 'Linux'):
         def_port = '/dev/ttyUSB0'
 
@@ -46,8 +46,8 @@ def is_meter_online(chn, addr, verbose=0):
     return rsp
 
 def enter_factory_mode(chn, addr, verbose=0):
-    global passwd
-    global opid
+    passwd = [0x00,0x00,0x00]
+    opid = [0x00,0x00,0x00,0x00]
 
     sys.stdout.write('\n--- Enter factory mode ---\n')
     cmd     = [0x0F, 0x01, 0x00, 0x04]
@@ -446,47 +446,27 @@ def _test_main(port_id, addr, wait_for_read=0.5, verbose=0):
         sys.stdout.write('Fail to open %s...exit script!\n\n\n' % port_id)
         sys.exit()
 
-    if (addr == []):
-        rsp = read_meter_address(chn, verbose)
-    else:
-        #chn.print_hex_list(addr)
-        rsp = is_meter_online(chn, addr, verbose)
+    rsp = read_meter_address(chn, verbose)
 
-    if rsp:
-        addr = chn.rx_addr
-        
-    if rsp:
-        rsp = read_date(chn, addr, verbose)
-        
-    if rsp:
-        rsp = read_time(chn, addr, verbose)
-    
-    if rsp:
-        rsp = read_voltage(chn, addr, verbose)
-        
-    if rsp:
-        rsp = read_current(chn, addr, verbose)
-    
-    if rsp:
-        rsp = read_power(chn, addr, verbose)
-   
-    if rsp:
-        rsp = read_temperature(chn, addr, verbose)
 
-    if rsp:
-        rsp = read_battery_voltage(chn, addr, verbose)
-    
-    if rsp:
-        rsp = read_last_outage_timestamp(chn, addr, 1, verbose)
+    addr = chn.rx_addr
 
-    if rsp:
-        rsp = read_preset_billing_time(chn, addr, verbose)
+    read_date(chn, addr, verbose)
+    read_time(chn, addr, verbose)    
+    
+    read_voltage(chn, addr, verbose)
+    read_current(chn, addr, verbose)
+    read_power(chn, addr, verbose)
+    # read_temperature(chn, addr, verbose)
+    read_battery_voltage(chn, addr, verbose)
+    
+    read_last_outage_timestamp(chn, addr, 1, verbose)
+    # read_preset_billing_time(chn, addr, verbose)
 
     m = 0
     for n in range(0,5):
         if rsp:
-            rsp = read_energy(chn, addr, m, n, verbose)
-
+            pass #rsp = read_energy(chn, addr, m, n, verbose)
 
     sys.stdout.write('\n\n')
 
@@ -593,7 +573,7 @@ def _main(argv):
         elif opt in ("-v", "--verbose"):
             verbose = 1
 
-    def_port =  get_def_port()
+    def_port =  get_def_port_custom()
     
     if port_id == '':
         sys.stdout.write('\n---> No port specified. Use default %s.\n' % def_port)

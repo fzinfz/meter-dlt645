@@ -5,7 +5,6 @@ import time
 import sys
 import platform
 
-from local_keys import *
 
 ser =  serial.Serial()
 
