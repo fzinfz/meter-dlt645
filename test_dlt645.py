@@ -8,7 +8,9 @@ import signal
 import platform 
 
 # from local_keys import *
-
+passwd = [0x00,0x00,0x00]
+opid = [0x00,0x00,0x00,0x00]
+    
 from serial.tools.list_ports import comports
  
 dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -27,7 +29,7 @@ def get_def_port_custom():
 def get_def_port():
     ports=comports()
     if ports != []:
-        return  ports[0].device
+        return  ports[-1].device
     else:
         return None
 
@@ -46,8 +48,8 @@ def is_meter_online(chn, addr, verbose=0):
     return rsp
 
 def enter_factory_mode(chn, addr, verbose=0):
-    passwd = [0x00,0x00,0x00]
-    opid = [0x00,0x00,0x00,0x00]
+    global passwd
+    global opid
 
     sys.stdout.write('\n--- Enter factory mode ---\n')
     cmd     = [0x0F, 0x01, 0x00, 0x04]
@@ -284,6 +286,19 @@ def get_current_string(ap):
     s = sg + s
     return s
 
+
+def read_power_energy(chn, addr, verbose=0):
+    sys.stdout.write('\n--- Read power energy---\n')
+    chn.encode(addr, 0x11, [0x0, 0x0, 0x0, 0x0])
+    rsp = chn.xchg_data(verbose)
+    if rsp:
+        s = chn.rx_payload
+        e = int(''.join(["%02x" % x for x in s[-4:][::-1]]))/100
+        sys.stdout.write("Power energy: %s \n" % e)
+    
+    return rsp
+
+
 def read_energy(chn, addr, month, segment, verbose=0):
     month_tab = ['Current', 'Last 1', 'Last 2', 'Last 3', \
            'Last 4', 'Last 5', 'Last 6', 'Last 7', \
@@ -456,17 +471,18 @@ def _test_main(port_id, addr, wait_for_read=0.5, verbose=0):
     
     read_voltage(chn, addr, verbose)
     read_current(chn, addr, verbose)
-    read_power(chn, addr, verbose)
+    read_power(chn, addr, verbose)    
     # read_temperature(chn, addr, verbose)
     read_battery_voltage(chn, addr, verbose)
     
     read_last_outage_timestamp(chn, addr, 1, verbose)
     # read_preset_billing_time(chn, addr, verbose)
 
-    m = 0
-    for n in range(0,5):
-        if rsp:
-            pass #rsp = read_energy(chn, addr, m, n, verbose)
+    # read_power_energy(chn, addr, verbose)
+    
+    for m in range(0,2):
+        for n in [0,2,4]:
+            read_energy(chn, addr, m, n, verbose)
 
     sys.stdout.write('\n\n')
 
@@ -545,10 +561,6 @@ def _main(argv):
     verbose = 0
 
     signal.signal(signal.SIGINT, signal_handler)
-    sys.stdout.write("\n")
-    sys.stdout.write("---------------------------------------\n")
-    sys.stdout.write("---------- DLT645 test script ---------\n")
-    sys.stdout.write("---------------------------------------\n")
 
     sys.stdout.write(time.strftime("Run timestamp is " + "%Y-%m-%d %H:%M:%S", time.localtime()) + "\n")
 
@@ -573,7 +585,7 @@ def _main(argv):
         elif opt in ("-v", "--verbose"):
             verbose = 1
 
-    def_port =  get_def_port_custom()
+    def_port =  get_def_port()
     
     if port_id == '':
         sys.stdout.write('\n---> No port specified. Use default %s.\n' % def_port)
